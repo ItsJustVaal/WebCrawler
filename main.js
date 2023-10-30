@@ -1,13 +1,15 @@
-const { argv } = require("node:process");
 const { crawlPage } = require("./crawl");
 
-function main() {
-  if (argv.length < 3 || argv.length > 3) {
+async function main() {
+  if (process.argv.length < 3 || process.argv.length > 3) {
     console.log("Error, too few or too many arguemnets");
-  } else {
-    console.log(`Running Crawler with baseURL: ${argv[2]}`);
-    crawlPage(argv[2]);
   }
+  const baseURL = process.argv[2];
+  console.log(`Starting with: ${baseURL}`);
+  pages = await crawlPage(baseURL, baseURL, {});
+  console.log(pages);
 }
 
 main();
+
+// "https://wagslane.dev"

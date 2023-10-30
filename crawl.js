@@ -6,7 +6,7 @@ function normalizeURL(url) {
   if (fullPath.length > 0 && fullPath.slice(-1) === "/") {
     fullPath = fullPath.slice(0, -1);
   }
-  return fullPath;
+  return url;
 }
 
 function getURLsFromHTML(html, rootURL) {
@@ -31,15 +31,51 @@ function getURLsFromHTML(html, rootURL) {
   return unNormalizedURLS;
 }
 
-async function crawlPage(url) {
-  const html = await fetch(url);
-  if (!html.headers.get("content-type").includes("text/html")) {
-    console.log(`Error: Not HTML returned ${html.headers.get("content-type")}`);
-  } else if (!html.ok) {
-    console.log(`Error Status Code: ${html.status}`);
-  } else {
-    console.log(await html.text());
+async function crawlPage(baseURL, currentURL, pages) {
+  let base = new URL(baseURL);
+  let curr = new URL(currentURL);
+
+  if (base.hostname !== curr.hostname) {
+    return pages;
   }
+
+  let normalCurr = normalizeURL(currentURL);
+
+  if (pages[normalCurr] > 0) {
+    pages[normalCurr]++;
+    return pages;
+  }
+
+  if (currentURL === baseURL) {
+    pages[normalCurr] = 0;
+  } else {
+    pages[normalCurr] = 1;
+  }
+
+  console.log(`Trying site: ${normalCurr}`);
+  let text = "";
+  try {
+    const resp = await fetch(currentURL);
+    if (resp.status > 399) {
+      console.log(`Got HTTP error, status code: ${resp.status}`);
+      return pages;
+    }
+    const contentType = resp.headers.get("content-type");
+    if (!contentType.includes("text/html")) {
+      console.log(`Got non-html response: ${contentType}`);
+      return pages;
+    }
+    text = await resp.text();
+  } catch (error) {
+    console.log(`Failed with error: ${error.message}`);
+  }
+
+  const urls = getURLsFromHTML(text, baseURL);
+  for (const url of urls) {
+    pages = await crawlPage(baseURL, url, pages);
+  }
+
+  return pages;
 }
 
 module.exports = {
